@@ -5,12 +5,16 @@ var http = require('http');
 function Filter (name, url_match, contents_match, replace_string) {
 	this.name = name;
 	this.url_match = new RegExp(url_match);
-	this.contents_match = new RegExp(contents_match);
+	this.contents_match = new RegExp(contents_match, "gm");
 	this.replace_string = replace_string;
 
+	this.url_match.compile(this.url_match);
+	this.contents_match.compile(this.contents_match);
+
 	this.process = function(url, body) {
-		if (url_match.test(url)) {
-			body = body.replace(contents_match, replace_string);
+		if (this.url_match.test(url)) {
+			console.log("running filter '" + this.name + "' on " + url);
+			body = body.replace(this.contents_match, replace_string);
 		}
 		return body;
 	};
@@ -30,12 +34,17 @@ function build_filter_chain () {
 	fs.readdir('filters', function (err, files) {
 		for (i in files) {
 			fs.readFile('filters/' + files[i], function (err, data) {
-				var obj = JSON.parse(data);
-				var filter = new Filter(obj.name, obj.url, obj.capture, obj.replace);
+				try {
+					var obj = JSON.parse(data);
+					var filter = new Filter(obj.name, obj.url, obj.capture, obj.replace);
 
-				filter_chain.push(filter);
-				console.log('Loaded filter "' + obj.name + '"');
-				//filter_chain[file] = filter;
+					filter_chain.push(filter);
+					console.log('Loaded filter "' + obj.name + '"');
+					//filter_chain[file] = filter;
+				}
+				catch (err) {
+					console.log(err);
+				}
 			});
 		}
 	});
@@ -65,6 +74,12 @@ http.createServer(function (req, res) {
 	                });
 
 			response.on('end', function () {
+				if (/text/.test(type)) {
+					for (i in filter_chain) {
+						body = filter_chain[i].process(req.url, body);
+					}
+				}
+
 				res.end(body);
 			});
 
