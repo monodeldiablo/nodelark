@@ -1,6 +1,6 @@
-var http = require('http');
 var sys = require('sys');
 var fs = require('fs');
+var http = require('http');
 
 function Filter (name, url_match, contents_match, replace_string) {
 	this.name = name;
@@ -42,44 +42,38 @@ function build_filter_chain () {
 }
 
 http.createServer(function (req, res) {
-	console.log('  got a request for ' + req.url);
-        var client = http.createClient(80, req.headers['host']);
-        var request = client.request(req.method, req.url, req.headers);
-        request.end();
+	try {
+		console.log('  got a request for ' + req.url);
+	        var client = http.createClient(80, req.headers['host']);
+		var headers = req.headers;
+		headers['accept-encoding'] = '';
+	        var request = client.request(req.method, req.url, headers);
+	        request.end();
 
-        request.on('response', function (response) {
-	//	var body = '';
-	//	console.log(response.headers);
-	//	var type = response.headers['content-type'];
-	//	console.log(type);
+	        request.on('response', function (response) {
+			var body = '';
+			var type = response.headers['content-type'];
 
-                response.on('data', function (chunk) {
-	//		if (/text/.test(type)) {
-	//			console.log("chunking text");
-	//			body += chunk.toString('utf-8');
-	//		}
+	                response.on('data', function (chunk) {
+				if (/text/.test(type)) {
+					body += chunk;
+				}
 
-	//		else {
-	//			console.log("writing bits");
-                        	res.write(chunk);
-	//		}
-                });
+				else {
+					res.write(chunk);
+				}
+	                });
 
-		response.on('end', function () {
-	//		if (/text/.test(type)) {
-	//			console.log("finishing text");
-	//			console.log(body);
-	//			res.end(body);
-	//		}
+			response.on('end', function () {
+				res.end(body);
+			});
 
-	//		else {
-	//			console.log("finishing bits");
-				res.end();
-	//		}
+			res.writeHead(response.statusCode, response.headers);
 		});
-
-        	res.writeHead(response.statusCode, response.headers);
-        });
+	}
+	catch (err) {
+		console.log(err);
+	}
 }).listen(58008);
 build_filter_chain ();
 console.log('Server running at http://127.0.0.1:58008');
