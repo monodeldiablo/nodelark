@@ -20,32 +20,46 @@ function Filter (name, url_match, contents_match, replace_string) {
 	};
 }
 
-// FIXME: Add a filesystem watch to automatically reload a given filter if it
-//        is changed.
+// Create a FilterChain object to be used as a hash. Filters will be stored
+// with their paths as keys.
+//
+// NOTE: Because of this, filter order cannot be guaranteed!
 function FilterChain () {
 }
 
-var filter_chain = new Array();
-//var filter_chain = new FilterChain();
+//var filter_chain = new Array();
+var filter_chain = new FilterChain();
 
+// Load the filter description at 'file'.
+function load_filter (file) {
+	fs.readFile(file, function (err, data) {
+		try {
+			var obj = JSON.parse(data);
+			var filter = new Filter(obj.name, obj.url, obj.capture, obj.replace);
+
+			//filter_chain.push(filter);
+			filter_chain[file] = filter;
+			console.log('Loaded filter "' + obj.name + '"');
+		}
+		catch (err) {
+			console.log(err);
+		}
+	});
+
+	// Add a filesystem watch to reload a filter if its description file changes.
+	fs.watchFile(file, function (curr, prev) {
+		load_filter (file);
+	});
+}
+
+// Iterate over the files in the 'filters/' directory, loading each as a
+// filter and adding it to the chain.
 function build_filter_chain () {
-	filter_chain = new Array();
-
 	fs.readdir('filters', function (err, files) {
 		for (i in files) {
-			fs.readFile('filters/' + files[i], function (err, data) {
-				try {
-					var obj = JSON.parse(data);
-					var filter = new Filter(obj.name, obj.url, obj.capture, obj.replace);
+			var file = 'filters/' + files[i];
 
-					filter_chain.push(filter);
-					console.log('Loaded filter "' + obj.name + '"');
-					//filter_chain[file] = filter;
-				}
-				catch (err) {
-					console.log(err);
-				}
-			});
+			load_filter(file);
 		}
 	});
 }
