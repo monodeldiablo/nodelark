@@ -1,6 +1,0 @@
-{
-	"name": "Wholesale image replacer",
-	"url": "erinkendig.com",
-	"capture": "style/images/content",
-	"replace": "http://unpac.org"
-}

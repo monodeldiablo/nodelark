@@ -1,0 +1,6 @@
+{
+	"name": "Example filter",
+	"url": "some.url/path/if/desired",
+	"capture": "regular (expression)*",
+	"replace": "fubar regular expression \\1"
+}
